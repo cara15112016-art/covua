@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cờ Vua 2 Người Chơi</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<h1>♞ Cờ Vua 2 Người</h1>
+<div id="status">Lượt Trắng đi</div>
+<div id="layout">
+  <div id="board"></div>
+  <div id="panel">
+    <h3>📜 Nước đi (<span id="count">0</span>)</h3>
+    <div id="moves"></div>
+    <h3>♟ Ăn được: <span id="captured" style="font-weight:normal"></span></h3>
+    <div class="btns">
+      <button id="undo">↩ Undo</button>
+      <button id="flip" class="secondary">⇅ Lật bàn</button>
+      <button id="reset" class="secondary">↺ Ván mới</button>
+    </div>
+    <div id="online">
+      <h3>🌐 PvP Online</h3>
+      <div id="netStatus">Chưa kết nối (chơi 2 người tại chỗ)</div>
+      <div class="btns">
+        <button id="createRoom" style="background:#339af0">Tạo phòng</button>
+        <button id="leaveRoom" class="secondary">Rời</button>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:6px">
+        <input id="roomCode" placeholder="Nhập mã phòng...">
+        <button id="joinRoom" class="secondary">Vào</button>
+      </div>
+      <small>Người 1 bấm Tạo phòng → gửi mã cho người 2. Người 2 nhập mã → Vào. Chủ phòng cầm Trắng.</small>
+    </div>
+    <div id="editor">
+      <h3>🛠 Tạo thế cờ</h3>
+      <div class="btns">
+        <button id="editMode" class="secondary">Xếp cờ: TẮT</button>
+        <button id="clearBoard" class="secondary">Xóa bàn</button>
+      </div>
+      <div id="palette"></div>
+      <div class="btns">
+        <button id="startPos" class="secondary">Cờ ban đầu</button>
+        <button id="playHere" style="background:#339af0">Chơi từ thế này</button>
+      </div>
+      <label style="font-size:13px">Lượt đi: <select id="sideToMove"><option value="w">Trắng</option><option value="b">Đen</option></select></label>
+      <input id="fen" placeholder="Dán FEN vào đây rồi Enter...">
+      <div class="btns"><button id="loadFen" class="secondary">Nạp FEN</button><button id="copyFen" class="secondary">Copy FEN</button></div>
+      <small>Kéo quân từ khung vào bàn để xếp (không dùng thế có sẵn - bàn sẽ trống). Hoặc chạm quân rồi chạm ô. Kéo quân trên bàn để di chuyển, chuột phải để xóa.</small>
+    </div>
+    <p style="margin-top:10px;font-size:13px;opacity:.8">Luật đầy đủ: nhập thành, bắt tốt qua đường, phong cấp, chiếu / chiếu hết, hòa.</p>
+  </div>
+</div>
+
+<div id="promo"><div class="box"><b>Phong cấp thành:</b><div id="promoChoices"></div></div></div>
+
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="js/state.js"></script>
+<script src="js/rules.js"></script>
+<script src="js/board.js"></script>
+<script src="js/fen.js"></script>
+<script src="js/editor.js"></script>
+<script src="js/net.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
