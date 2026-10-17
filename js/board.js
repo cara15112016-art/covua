@@ -47,10 +47,12 @@ function afterMove() {
     if (chk) { st.textContent = `♔ CHIẾU HẾT! ${turn === 'w' ? 'Đen' : 'Trắng'} thắng!`; st.classList.add('check'); }
     else st.textContent = '🤝 HÒA (hết nước đi hợp lệ - stalemate)!';
   } else {
-    const mine = (typeof NET !== 'undefined' && NET.active) ? (turn === NET.myColor ? ' (lượt bạn)' : ' (lượt đối thủ)') : '';
+    let mine = (typeof NET !== 'undefined' && NET.active) ? (turn === NET.myColor ? ' (lượt bạn)' : ' (lượt đối thủ)') : '';
+    if (mode === 'ai') mine = turn === aiColor ? ' (lượt máy)' : ' (lượt bạn)';
     st.textContent = (chk ? `⚠️ ${name} đang bị CHIẾU - ` : `Lượt ${name}`) + mine;
   }
   render();
+  if (mode === 'ai') maybeAiMove();
 }
 
 function showPromo(color) {
@@ -72,6 +74,7 @@ function showPromo(color) {
 function onClick(r, c) {
   if (editMode) { placePiece(r, c); return; }
   if (gameOver || promoPending) return;
+  if (mode === 'ai' && (turn === aiColor || aiThinking)) return; // lượt máy: không cho bấm
   if (typeof NET !== 'undefined' && NET.active && turn !== NET.myColor) return; // khóa: chỉ đi quân mình online
   const p = board[r][c];
   if (selected) {

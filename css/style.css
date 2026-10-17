@@ -40,6 +40,11 @@ button:hover { opacity: .9; }
 #fen { width: 100%; padding: 6px; border-radius: 6px; border: none; font-size: 12px; margin-top: 6px; }
 #editor small { opacity: .8; font-size: 12px; }
 #online { margin-top: 12px; border-top: 1px solid #444; padding-top: 10px; }
+#mode { border-top: 1px solid #444; padding-top: 10px; }
+#mode h3 { margin-bottom: 6px; }
+#aiOpts { margin-top: 8px; font-size: 14px; }
+#aiOpts label { display: block; margin-top: 6px; }
+#aiOpts select { padding: 4px; border-radius: 6px; border: none; }
 #netStatus { background: #1b1a18; border-radius: 6px; padding: 8px; font-size: 13px; margin: 6px 0; }
 #roomCode { flex: 1; padding: 8px; border-radius: 6px; border: none; font-size: 13px; text-transform: uppercase; }
 #online small { opacity: .8; font-size: 12px; }

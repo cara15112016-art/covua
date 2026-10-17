@@ -2,12 +2,15 @@
 document.getElementById('undo').onclick = () => {
   if (typeof NET !== 'undefined' && NET.active) { alert('Online: không undo, đánh tiếp!'); return; }
   if (promoPending) return;
-  const h = history.pop(); if (!h) return;
-  const s = JSON.parse(h);
-  board = s.board.map(row => row.map(p => p ? { ...p } : null));
-  turn = s.turn; enPassant = s.enPassant; lastMove = s.lastMove;
-  moveTexts = s.moveTexts || moveTexts.slice(0, -1); historyCaps = s.historyCaps || [];
-  gameOver = false; selected = null; legalCache = []; render();
+  const steps = (mode === 'ai') ? 2 : 1; // đấu máy: lùi cả nước của máy + nước của mình
+  for (let i = 0; i < steps; i++) {
+    const h = history.pop(); if (!h) break;
+    const s = JSON.parse(h);
+    board = s.board.map(row => row.map(p => p ? { ...p } : null));
+    turn = s.turn; enPassant = s.enPassant; lastMove = s.lastMove;
+    moveTexts = s.moveTexts || moveTexts.slice(0, -1); historyCaps = s.historyCaps || [];
+  }
+  gameOver = false; aiThinking = false; selected = null; legalCache = []; render();
   document.getElementById('status').textContent = `Lượt ${turn === 'w' ? 'Trắng' : 'Đen'} đi`;
   document.getElementById('status').classList.remove('check');
 };
@@ -65,9 +68,38 @@ document.getElementById('copyFen').onclick = async () => {
 };
 document.getElementById('sideToMove').onchange = (e) => { turn = e.target.value; };
 
+// Chế độ chơi
+function syncModeUI() {
+  document.getElementById('mode2p').className = (mode === '2p') ? '' : 'secondary';
+  document.getElementById('modeAi').className = (mode === 'ai') ? '' : 'secondary';
+  document.getElementById('aiOpts').style.display = (mode === 'ai') ? 'block' : 'none';
+}
+function setMode(m) {
+  mode = m; aiThinking = false;
+  syncModeUI();
+  if (m === 'ai') startAiGame();
+  else { moveTexts = []; historyCaps = []; init(); netStatus('Chơi 2 người tại chỗ.'); }
+}
+function startAiGame() {
+  destroyNet();
+  aiColor = document.getElementById('aiSide').value;
+  aiLevel = +document.getElementById('aiLevel').value;
+  flipped = (aiColor === 'b');
+  moveTexts = []; historyCaps = []; init();
+  syncModeUI();
+  const name = aiColor === 'w' ? 'Đen' : 'Trắng';
+  document.getElementById('status').textContent = `⚔️ Đấu máy (cấp ${aiLevel}) — bạn cầm ${name}`;
+  maybeAiMove();
+}
+document.getElementById('mode2p').onclick = () => setMode('2p');
+document.getElementById('modeAi').onclick = () => setMode('ai');
+document.getElementById('aiNewGame').onclick = () => startAiGame();
+document.getElementById('aiSide').onchange = () => { if (mode === 'ai') startAiGame(); };
+document.getElementById('aiLevel').onchange = () => { aiLevel = +document.getElementById('aiLevel').value; if (mode === 'ai') startAiGame(); };
+
 // Online PvP
-document.getElementById('createRoom').onclick = () => { createRoom(); };
-document.getElementById('joinRoom').onclick = () => { joinRoom(document.getElementById('roomCode').value); };
+document.getElementById('createRoom').onclick = () => { mode = '2p'; syncModeUI(); createRoom(); };
+document.getElementById('joinRoom').onclick = () => { mode = '2p'; syncModeUI(); joinRoom(document.getElementById('roomCode').value); };
 document.getElementById('roomCode').addEventListener('keydown', (e) => { if (e.key === 'Enter') joinRoom(e.target.value); });
 document.getElementById('leaveRoom').onclick = () => {
   if (typeof sendReset === 'function') sendReset();
@@ -78,4 +110,5 @@ document.getElementById('leaveRoom').onclick = () => {
 
 buildPalette();
 init();
+syncModeUI();
 prewarm();

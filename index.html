@@ -20,6 +20,29 @@
       <button id="flip" class="secondary">⇅ Lật bàn</button>
       <button id="reset" class="secondary">↺ Ván mới</button>
     </div>
+    <div id="mode">
+      <h3>🎮 Chế độ chơi</h3>
+      <div class="btns">
+        <button id="mode2p">2 Người</button>
+        <button id="modeAi" class="secondary">Đấu Máy</button>
+      </div>
+      <div id="aiOpts" style="display:none">
+        <label style="font-size:13px">Bạn cầm:
+          <select id="aiSide"><option value="w">Trắng</option><option value="b">Đen</option></select>
+        </label>
+        <label style="font-size:13px">Cấp độ:
+          <select id="aiLevel">
+            <option value="1">1 — Dễ</option>
+            <option value="2">2 — Trung bình</option>
+            <option value="3" selected>3 — Khó</option>
+          </select>
+        </label>
+        <div class="btns">
+          <button id="aiNewGame" style="background:#339af0">Ván đấu máy mới</button>
+        </div>
+        <small>Cấp 1 dễ nhất, cấp 3 khó nhất. Bạn đi trước nếu cầm Trắng.</small>
+      </div>
+    </div>
     <div id="online">
       <h3>🌐 PvP Online</h3>
       <div id="netStatus">Chưa kết nối (chơi 2 người tại chỗ)</div>
@@ -60,6 +83,7 @@
 <script src="js/board.js"></script>
 <script src="js/fen.js"></script>
 <script src="js/editor.js"></script>
+<script src="js/ai.js"></script>
 <script src="js/net.js"></script>
 <script src="js/main.js"></script>
 </body>

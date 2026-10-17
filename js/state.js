@@ -4,6 +4,8 @@ const PIECES = { k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟' };
 let board, turn, selected, legalCache, history, lastMove, enPassant, flipped, gameOver, promoPending;
 let moveTexts = [], historyCaps = [];
 let editMode = false, paletteSel = 'K';
+// Chế độ: '2p' = 2 người, 'ai' = đấu với máy
+let mode = '2p', aiColor = 'b', aiLevel = 3, aiThinking = false;
 
 function init() {
   board = [
