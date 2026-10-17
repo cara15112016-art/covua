@@ -74,7 +74,9 @@ document.getElementById('leaveRoom').onclick = () => {
   destroyNet(); flipped = false;
   moveTexts = []; historyCaps = []; init();
   netStatus('Đã rời phòng (chơi 2 người tại chỗ).');
+  prewarm();
 };
 
 buildPalette();
 init();
+prewarm();

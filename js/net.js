@@ -1,6 +1,20 @@
-// net.js — đấu PvP online qua PeerJS (P2P, không cần server riêng)
-// Chủ phòng cầm Trắng, khách cầm Đen. Mỗi nước đi gửi full state qua FEN.
-const NET = { active: false, peer: null, conn: null, myColor: 'w', room: '', isHost: false, applying: false };
+// net.js — đấu PvP online qua PeerJS (P2P). Tối ưu để vào phòng nhanh.
+// Pre-kết nối signaling + STUN ngay khi mở trang, nên bấm Tạo/Vào là gần như tức thì.
+const NET = { active: false, peer: null, conn: null, myColor: 'w', room: '', isHost: false, applying: false, ready: false, code: '' };
+
+const NET_ICE = {
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:stun3.l.google.com:19302' },
+    { urls: 'stun:global.stun.twilio.com:3478' }
+  ],
+  iceCandidatePoolSize: 10,
+  sdpSemantics: 'unified-plan',
+  bundlePolicy: 'max-bundle',
+  rtcpMuxPolicy: 'require'
+};
 
 function netStatus(msg) {
   const el = document.getElementById('netStatus');
@@ -14,39 +28,58 @@ function makeCode() {
 function destroyNet() {
   try { NET.conn?.close(); } catch {}
   try { NET.peer?.destroy(); } catch {}
-  NET.active = false; NET.conn = null; NET.peer = null; NET.room = '';
+  NET.active = false; NET.conn = null; NET.peer = null; NET.room = ''; NET.ready = false;
+}
+
+// Tạo sẵn peer + đăng ký mã phòng ngay khi mở trang (giảm thời gian chờ)
+function prewarm() {
+  if (typeof Peer === 'undefined') { netStatus('Chưa tải PeerJS (cần mạng).'); return; }
+  destroyNet();
+  const code = makeCode();
+  NET.code = code;
+  const peer = new Peer('cv-' + code, { config: NET_ICE, debug: 0 });
+  NET.peer = peer;
+  netStatus('Đang kết nối máy chủ...');
+  peer.on('open', () => {
+    NET.ready = true;
+    netStatus('Sẵn sàng! Bấm "Tạo phòng" hoặc nhập mã để vào.');
+  });
+  peer.on('connection', (conn) => setupConn(conn, true));
+  peer.on('disconnected', () => { try { peer.reconnect(); } catch {} });
+  peer.on('error', (e) => {
+    if (e.type === 'unavailable-id') { prewarm(); return; }
+    netStatus('Lỗi: ' + e.type);
+  });
 }
 
 function createRoom() {
   if (typeof Peer === 'undefined') { alert('Chưa tải được PeerJS (cần mạng để load CDN).'); return; }
-  destroyNet();
-  const code = makeCode();
-  NET.room = code; NET.isHost = true; NET.myColor = 'w';
-  netStatus('Đang tạo phòng ' + code + '...');
-  const peer = new Peer('chess-pvp-' + code);
-  NET.peer = peer;
-  peer.on('open', () => {
-    netStatus('Phòng ' + code + ' — gửi mã cho bạn để vào. Bạn cầm Trắng.');
-    document.getElementById('roomCode').value = code;
-  });
-  peer.on('connection', (conn) => setupConn(conn, true));
-  peer.on('error', (e) => netStatus('Lỗi: ' + e.type));
+  if (!NET.peer) { prewarm(); }
+  if (!NET.ready) {
+    netStatus('Đang kết nối máy chủ, tạo phòng sau 1 giây...');
+    setTimeout(createRoom, 1000);
+    return;
+  }
+  NET.isHost = true; NET.myColor = 'w'; NET.room = NET.code;
+  document.getElementById('roomCode').value = NET.code;
+  netStatus('Phòng ' + NET.code + ' — gửi mã cho bạn. Bạn cầm Trắng. Đang chờ đối thủ...');
 }
 
 function joinRoom(codeRaw) {
   if (typeof Peer === 'undefined') { alert('Chưa tải được PeerJS (cần mạng để load CDN).'); return; }
   const code = (codeRaw || '').trim().toUpperCase();
   if (!code) { alert('Nhập mã phòng!'); return; }
-  destroyNet();
-  NET.room = code; NET.isHost = false; NET.myColor = 'b';
+  if (!NET.peer) { prewarm(); }
+  if (!NET.ready) {
+    netStatus('Đang kết nối máy chủ, thử vào lại sau 1 giây...');
+    setTimeout(() => joinRoom(code), 1000);
+    return;
+  }
+  NET.isHost = false; NET.myColor = 'b'; NET.room = code;
   netStatus('Đang vào phòng ' + code + '...');
-  const peer = new Peer();
-  NET.peer = peer;
-  peer.on('open', () => {
-    const conn = peer.connect('chess-pvp-' + code, { reliable: true });
-    setupConn(conn, false);
-  });
-  peer.on('error', (e) => netStatus('Lỗi: ' + e.type + ' (sai mã phòng?)'));
+  const conn = NET.peer.connect('cv-' + code, { reliable: true });
+  setupConn(conn, false);
+  setTimeout(() => { if (!NET.active) netStatus('Vẫn đang kết nối phòng ' + code + '... (kiểm tra mã phòng đúng chưa)'); }, 4000);
 }
 
 function setupConn(conn, isHost) {
@@ -75,7 +108,6 @@ function sendState() {
 function applyState(msg) {
   NET.applying = true;
   try {
-    // dựng bàn từ FEN nhưng giữ lại lịch sử nước đi
     const keepMoves = msg.moveTexts || [], keepCaps = msg.historyCaps || [];
     fenToBoardSilent(msg.fen);
     moveTexts = keepMoves; historyCaps = keepCaps;
@@ -85,7 +117,6 @@ function applyState(msg) {
   } finally { NET.applying = false; }
 }
 
-// dựng bàn từ FEN, không reset status ồn ào (dùng nội bộ cho net)
 function fenToBoardSilent(fen) {
   const parts = fen.trim().split(/\s+/);
   const rows = parts[0].split('/');
