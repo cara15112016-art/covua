@@ -1,6 +1,12 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Segoe UI', Arial, sans-serif; background: #312e2b; color: #fff; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px; }
-h1 { margin-bottom: 10px; }
+body { font-family: 'Segoe UI', Arial, sans-serif; color: #fff; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px;
+  background: #0d0c0b url('bg.jpg') no-repeat center center fixed;
+  background-size: cover; }
+/* lớp tối phủ để chữ dễ đọc (không chặn bấm chuột) */
+body::before { content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background: linear-gradient(180deg, rgba(8,8,10,.86) 0%, rgba(8,8,10,.72) 45%, rgba(8,8,10,.9) 100%); }
+body > * { position: relative; z-index: 1; }
+h1 { margin-bottom: 10px; text-shadow: 0 2px 8px rgba(0,0,0,.9); }
 #status { font-size: 18px; font-weight: bold; background: #262421; padding: 10px 20px; border-radius: 8px; margin-bottom: 12px; min-height: 44px; text-align: center; }
 #status.check { background: #a83434; }
 #layout { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; align-items: flex-start; }
