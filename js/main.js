@@ -18,7 +18,7 @@ document.getElementById('reset').onclick = () => {
   moveTexts = []; historyCaps = []; init();
   document.getElementById('status').textContent = 'Lượt Trắng đi';
   document.getElementById('status').classList.remove('check');
-  if (typeof NET !== 'undefined' && NET.active && NET.conn?.open) NET.conn.send({ t: 'reset' });
+  if (typeof sendReset === 'function' && typeof NET !== 'undefined' && NET.active) sendReset();
 };
 
 document.getElementById('editMode').onclick = (ev) => {
@@ -70,11 +70,10 @@ document.getElementById('createRoom').onclick = () => { createRoom(); };
 document.getElementById('joinRoom').onclick = () => { joinRoom(document.getElementById('roomCode').value); };
 document.getElementById('roomCode').addEventListener('keydown', (e) => { if (e.key === 'Enter') joinRoom(e.target.value); });
 document.getElementById('leaveRoom').onclick = () => {
-  if (typeof NET !== 'undefined' && NET.conn?.open) NET.conn.send({ t: 'reset' });
+  if (typeof sendReset === 'function') sendReset();
   destroyNet(); flipped = false;
   moveTexts = []; historyCaps = []; init();
   netStatus('Đã rời phòng (chơi 2 người tại chỗ).');
-  prewarm();
 };
 
 buildPalette();

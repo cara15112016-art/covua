@@ -1,20 +1,22 @@
-// net.js — đấu PvP online qua PeerJS (P2P). Tối ưu để vào phòng nhanh.
-// Pre-kết nối signaling + STUN ngay khi mở trang, nên bấm Tạo/Vào là gần như tức thì.
-const NET = { active: false, peer: null, conn: null, myColor: 'w', room: '', isHost: false, applying: false, ready: false, code: '' };
+// net.js — đấu PvP online qua Trystero (P2P tin cậy, không cần server riêng).
+// Dùng torrent + WebRTC, kết nối nhanh, xuyên NAT bằng STUN/TURN.
+// Chủ phòng cầm Trắng, khách cầm Đen.
+let trystero = null;
+const NET = { active: false, room: null, myColor: 'w', code: '', isHost: false, applying: false, ready: false };
 
 const NET_ICE = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
     { urls: 'stun:stun2.l.google.com:19302' },
-    { urls: 'stun:stun3.l.google.com:19302' },
     { urls: 'stun:global.stun.twilio.com:3478' },
     { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
     { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
     { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
-  ],
-  iceCandidatePoolSize: 10
+  ]
 };
+
+const NET_CFG = { appId: 'covua-pvp-2026', rtcConfig: NET_ICE };
 
 function netStatus(msg) {
   const el = document.getElementById('netStatus');
@@ -25,87 +27,82 @@ function makeCode() {
   return Math.random().toString(36).slice(2, 8).toUpperCase();
 }
 
-function destroyNet() {
-  try { NET.conn?.close(); } catch {}
-  try { NET.peer?.destroy(); } catch {}
-  NET.active = false; NET.conn = null; NET.peer = null; NET.room = ''; NET.ready = false;
+// Tải thư viện Trystero qua CDN (ESM) khi trang mở
+function prewarm() {
+  if (trystero) { NET.ready = true; netStatus('Sẵn sàng! Bấm "Tạo phòng" hoặc nhập mã để vào.'); return; }
+  netStatus('Đang tải kết nối...');
+  import('https://esm.sh/trystero').then((m) => {
+    trystero = m; NET.ready = true;
+    netStatus('Sẵn sàng! Bấm "Tạo phòng" hoặc nhập mã để vào.');
+  }).catch(() => { netStatus('Không tải được thư viện online (kiểm tra mạng).'); });
 }
 
-// Tạo sẵn peer + đăng ký mã phòng ngay khi mở trang (giảm thời gian chờ)
-function prewarm() {
-  if (typeof Peer === 'undefined') { netStatus('Chưa tải PeerJS (cần mạng).'); return; }
-  destroyNet();
-  const code = makeCode();
-  NET.code = code;
-  const peer = new Peer('cv-' + code, { config: NET_ICE, debug: 0 });
-  NET.peer = peer;
-  netStatus('Đang kết nối máy chủ...');
-  peer.on('open', () => {
-    NET.ready = true;
-    netStatus('Sẵn sàng! Bấm "Tạo phòng" hoặc nhập mã để vào.');
-  });
-  peer.on('connection', (conn) => setupConn(conn, true));
-  peer.on('disconnected', () => { try { peer.reconnect(); } catch {} });
-  peer.on('error', (e) => {
-    if (e.type === 'unavailable-id') { prewarm(); return; }
-    netStatus('Lỗi: ' + e.type);
-  });
+function destroyNet() {
+  try { NET.room?.leave(); } catch {}
+  NET.active = false; NET.room = null; NET.code = '';
+}
+
+function ensureReady(after) {
+  if (!trystero) { prewarm(); }
+  if (!NET.ready) { setTimeout(after, 800); return false; }
+  return true;
 }
 
 function createRoom() {
-  if (typeof Peer === 'undefined') { alert('Chưa tải được PeerJS (cần mạng để load CDN).'); return; }
-  if (!NET.peer) { prewarm(); }
-  if (!NET.ready) {
-    netStatus('Đang kết nối máy chủ, tạo phòng sau 1 giây...');
-    setTimeout(createRoom, 1000);
-    return;
-  }
-  NET.isHost = true; NET.myColor = 'w'; NET.room = NET.code;
-  document.getElementById('roomCode').value = NET.code;
-  netStatus('Phòng ' + NET.code + ' — gửi mã cho bạn. Bạn cầm Trắng. Đang chờ đối thủ...');
+  if (!ensureReady(createRoom)) return;
+  destroyNet();
+  const code = makeCode();
+  NET.code = code; NET.isHost = true; NET.myColor = 'w';
+  document.getElementById('roomCode').value = code;
+  netStatus('Phòng ' + code + ' — gửi mã cho bạn. Bạn cầm Trắng. Đang chờ đối thủ...');
+  startRoom(code);
 }
 
 function joinRoom(codeRaw) {
-  if (typeof Peer === 'undefined') { alert('Chưa tải được PeerJS (cần mạng để load CDN).'); return; }
   const code = (codeRaw || '').trim().toUpperCase();
   if (!code) { alert('Nhập mã phòng!'); return; }
-  if (!NET.peer) { prewarm(); }
-  if (!NET.ready) {
-    netStatus('Đang kết nối máy chủ, thử vào lại sau 1 giây...');
-    setTimeout(() => joinRoom(code), 1000);
-    return;
-  }
-  NET.isHost = false; NET.myColor = 'b'; NET.room = code;
+  if (!ensureReady(() => joinRoom(code))) return;
+  destroyNet();
+  NET.code = code; NET.isHost = false; NET.myColor = 'b';
   netStatus('Đang vào phòng ' + code + '...');
-  const conn = NET.peer.connect('cv-' + code, { reliable: true });
-  setupConn(conn, false);
-  conn.on('error', (err) => { netStatus('Lỗi kết nối: ' + (err?.message || err) + '. Thử lại!'); });
-  setTimeout(() => {
-    if (!NET.active) netStatus('Vẫn đang kết nối ' + code + '... (đảm bảo bạn là người thứ 2, máy chủ có thể chậm)');
-  }, 4000);
+  startRoom(code);
 }
 
-function setupConn(conn, isHost) {
-  NET.conn = conn; NET.isHost = isHost;
-  NET.myColor = isHost ? 'w' : 'b';
-  conn.on('open', () => {
+function startRoom(code) {
+  const room = trystero.joinRoom(NET_CFG, code);
+  NET.room = room;
+
+  const [sendState, getState] = room.action('state');
+  const [sendReset, getReset] = room.action('reset');
+
+  getState((msg) => applyState(msg));
+  getReset(() => { moveTexts = []; historyCaps = []; init(); if (NET.myColor === 'b') flipped = true; render(); });
+
+  room.onPeerJoin(() => {
     NET.active = true;
     flipped = (NET.myColor === 'b');
-    netStatus(isHost ? 'Đối thủ đã vào! Bạn cầm Trắng.' : 'Đã vào phòng! Bạn cầm Đen.');
-    if (isHost) sendState();
+    netStatus(NET.isHost ? 'Đối thủ đã vào! Bạn cầm Trắng.' : 'Đã vào phòng! Bạn cầm Đen.');
+    if (NET.isHost) {
+      sendState({ fen: boardToFEN(), moveTexts, historyCaps, lastMove, turn });
+    }
     render();
   });
-  conn.on('data', (msg) => {
-    if (!msg || typeof msg !== 'object') return;
-    if (msg.t === 'state') applyState(msg);
-    if (msg.t === 'reset') { moveTexts = []; historyCaps = []; init(); if (NET.myColor === 'b') flipped = true; render(); }
-  });
-  conn.on('close', () => { NET.active = false; netStatus('Đối thủ đã thoát.'); });
+
+  room.onPeerLeave(() => { NET.active = false; netStatus('Đối thủ đã thoát.'); });
+
+  // Gửi trạng thái tới mọi peer (ở 2 người là 1)
+  NET._send = sendState;
+  NET._sendReset = sendReset;
 }
 
 function sendState() {
-  if (!NET.active || !NET.conn?.open || NET.applying) return;
-  NET.conn.send({ t: 'state', fen: boardToFEN(), moveTexts, historyCaps, lastMove, turn });
+  if (!NET.active || NET.applying || !NET._send) return;
+  NET._send({ fen: boardToFEN(), moveTexts, historyCaps, lastMove, turn });
+}
+
+function sendReset() {
+  if (!NET._sendReset) return;
+  NET._sendReset({});
 }
 
 function applyState(msg) {
