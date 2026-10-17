@@ -8,12 +8,12 @@ const NET_ICE = {
     { urls: 'stun:stun1.l.google.com:19302' },
     { urls: 'stun:stun2.l.google.com:19302' },
     { urls: 'stun:stun3.l.google.com:19302' },
-    { urls: 'stun:global.stun.twilio.com:3478' }
+    { urls: 'stun:global.stun.twilio.com:3478' },
+    { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
   ],
-  iceCandidatePoolSize: 10,
-  sdpSemantics: 'unified-plan',
-  bundlePolicy: 'max-bundle',
-  rtcpMuxPolicy: 'require'
+  iceCandidatePoolSize: 10
 };
 
 function netStatus(msg) {
@@ -79,7 +79,10 @@ function joinRoom(codeRaw) {
   netStatus('Đang vào phòng ' + code + '...');
   const conn = NET.peer.connect('cv-' + code, { reliable: true });
   setupConn(conn, false);
-  setTimeout(() => { if (!NET.active) netStatus('Vẫn đang kết nối phòng ' + code + '... (kiểm tra mã phòng đúng chưa)'); }, 4000);
+  conn.on('error', (err) => { netStatus('Lỗi kết nối: ' + (err?.message || err) + '. Thử lại!'); });
+  setTimeout(() => {
+    if (!NET.active) netStatus('Vẫn đang kết nối ' + code + '... (đảm bảo bạn là người thứ 2, máy chủ có thể chậm)');
+  }, 4000);
 }
 
 function setupConn(conn, isHost) {
